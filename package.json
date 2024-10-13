@@ -22,7 +22,7 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/oslo-project/asn1"
+		"url": "https://github.com/faroedev/js"
 	},
 	"author": "pilcrowOnPaper",
 	"license": "MIT",
