@@ -29,7 +29,7 @@ export class Faroe {
 			if (typeof result !== "object" || result === null) {
 				throw new Error("Unexpected error response");
 			}
-			if (!("error" in result) || typeof result.error !== "string") {
+			if ("error" in result === false || typeof result.error !== "string") {
 				throw new Error("Unexpected error response");
 			}
 			throw new FaroeError(result.error);
@@ -61,7 +61,7 @@ export class Faroe {
 			if (typeof result !== "object" || result === null) {
 				throw new Error("Unexpected error response");
 			}
-			if (!("error" in result) || typeof result.error !== "string") {
+			if ("error" in result === false || typeof result.error !== "string") {
 				throw new Error("Unexpected error response");
 			}
 			throw new FaroeError(result.error);
@@ -245,10 +245,8 @@ export class Faroe {
 		await this.fetchNoBody("POST", `/users/${userId}/verify-2fa/totp`, body, clientIP);
 	}
 
-	public async deleteUserTOTPCredential(userId: string, clientIP: string | null): Promise<FaroeUser> {
-		const result = await this.fetchJSON("DELETE", `/users/${userId}/totp`, null, clientIP);
-		const user = parseUserJSON(result);
-		return user;
+	public async deleteUserTOTPCredential(userId: string, clientIP: string | null): Promise<void> {
+		await this.fetchNoBody("DELETE", `/users/${userId}/totp`, null, clientIP);
 	}
 
 	public async createPasswordResetRequest(email: string, clientIP: string | null): Promise<FaroePasswordResetRequest> {
@@ -390,19 +388,19 @@ function parseUserJSON(data: unknown): FaroeUser {
 	if (typeof data !== "object" || data === null) {
 		throw new Error("Failed to parse user object");
 	}
-	if (!("id" in data) || typeof data.id !== "string") {
+	if ("id" in data === false || typeof data.id !== "string") {
 		throw new Error("Failed to parse user object");
 	}
-	if (!("created_at" in data) || typeof data.created_at !== "number") {
+	if ("created_at" in data === false || typeof data.created_at !== "number") {
 		throw new Error("Failed to parse user object");
 	}
-	if (!("email" in data) || typeof data.email !== "string") {
+	if ("email" in data === false || typeof data.email !== "string") {
 		throw new Error("Failed to parse user object");
 	}
-	if (!("email_verified" in data) || typeof data.email_verified !== "boolean") {
+	if ("email_verified" in data === false || typeof data.email_verified !== "boolean") {
 		throw new Error("Failed to parse user object");
 	}
-	if (!("registered_totp" in data) || typeof data.registered_totp !== "boolean") {
+	if ("registered_totp" in data === false || typeof data.registered_totp !== "boolean") {
 		throw new Error("Failed to parse user object");
 	}
 	const user: FaroeUser = {
@@ -419,25 +417,25 @@ function parseEmailVerificationRequestJSON(data: unknown): FaroeEmailVerificatio
 	if (typeof data !== "object" || data === null) {
 		throw new Error("Failed to parse email verification request object");
 	}
-	if (!("id" in data) || typeof data.id !== "string") {
+	if ("id" in data === false || typeof data.id !== "string") {
 		throw new Error("Failed to parse email verification request object");
 	}
-	if (!("user_id" in data) || typeof data.user_id !== "string") {
+	if ("user_id" in data === false || typeof data.user_id !== "string") {
 		throw new Error("Failed to parse email verification request object");
 	}
-	if (!("created_at" in data) || typeof data.created_at !== "number") {
+	if ("created_at" in data === false || typeof data.created_at !== "number") {
 		throw new Error("Failed to parse email verification request object");
 	}
-	if (!("expires_at" in data) || typeof data.expires_at !== "number") {
+	if ("expires_at" in data === false || typeof data.expires_at !== "number") {
 		throw new Error("Failed to parse email verification request object");
 	}
-	if (!("email" in data) || typeof data.email !== "string") {
+	if ("email" in data === false || typeof data.email !== "string") {
 		throw new Error("Failed to parse email verification request object");
 	}
-	if (!("code" in data) || typeof data.code !== "string") {
+	if ("code" in data === false || typeof data.code !== "string") {
 		throw new Error("Failed to parse email verification request object");
 	}
-	if (!("registered_totp" in data) || typeof data.registered_totp !== "boolean") {
+	if ("registered_totp" in data === false || typeof data.registered_totp !== "boolean") {
 		throw new Error("Failed to parse email verification request object");
 	}
 	const request: FaroeEmailVerificationRequest = {
@@ -455,25 +453,25 @@ function parsePasswordResetRequestJSON(data: unknown): FaroePasswordResetRequest
 	if (typeof data !== "object" || data === null) {
 		throw new Error("Failed to parse password reset request object");
 	}
-	if (!("id" in data) || typeof data.id !== "string") {
+	if ("id" in data === false || typeof data.id !== "string") {
 		throw new Error("Failed to parse password reset request object");
 	}
-	if (!("user_id" in data) || typeof data.user_id !== "string") {
+	if ("user_id" in data === false || typeof data.user_id !== "string") {
 		throw new Error("Failed to parse password reset request object");
 	}
-	if (!("created_at" in data) || typeof data.created_at !== "number") {
+	if ("created_at" in data === false || typeof data.created_at !== "number") {
 		throw new Error("Failed to parse password reset request object");
 	}
-	if (!("expires_at" in data) || typeof data.expires_at !== "number") {
+	if ("expires_at" in data === false || typeof data.expires_at !== "number") {
 		throw new Error("Failed to parse password reset request object");
 	}
-	if (!("email" in data) || typeof data.email !== "string") {
+	if ("email" in data === false || typeof data.email !== "string") {
 		throw new Error("Failed to parse password reset request object");
 	}
-	if (!("email_verified" in data) || typeof data.email_verified !== "boolean") {
+	if ("email_verified" in data === false || typeof data.email_verified !== "boolean") {
 		throw new Error("Failed to parse password reset request object");
 	}
-	if (!("two_factor_verified" in data) || typeof data.two_factor_verified !== "boolean") {
+	if ("two_factor_verified" in data === false || typeof data.two_factor_verified !== "boolean") {
 		throw new Error("Failed to parse password reset request object");
 	}
 	const request: FaroePasswordResetRequest = {
@@ -492,7 +490,7 @@ function parseRecoveryCodeJSON(data: unknown): string {
 	if (typeof data !== "object" || data === null) {
 		throw new Error("Failed to parse recovery code");
 	}
-	if (!("recovery_code" in data) || typeof data.recovery_code !== "string") {
+	if ("recovery_code" in data === false || typeof data.recovery_code !== "string") {
 		throw new Error("Failed to parse recovery code");
 	}
 	return data.recovery_code;
@@ -502,16 +500,16 @@ function parseTOTPCredentialJSON(data: unknown): FaroeTOTPCredential {
 	if (typeof data !== "object" || data === null) {
 		throw new Error("Failed to parse TOTP credential object");
 	}
-	if (!("id" in data) || typeof data.id !== "string") {
+	if ("id" in data === false || typeof data.id !== "string") {
 		throw new Error("Failed to parse TOTP credential object");
 	}
-	if (!("user_id" in data) || typeof data.user_id !== "string") {
+	if ("user_id" in data === false || typeof data.user_id !== "string") {
 		throw new Error("Failed to parse TOTP credential object");
 	}
-	if (!("created_at" in data) || typeof data.created_at !== "number") {
+	if ("created_at" in data === false || typeof data.created_at !== "number") {
 		throw new Error("Failed to parse TOTP credential object");
 	}
-	if (!("key" in data) || typeof data.key !== "string") {
+	if ("key" in data === false || typeof data.key !== "string") {
 		throw new Error("Failed to parse TOTP credential object");
 	}
 	const credential: FaroeTOTPCredential = {
