@@ -249,13 +249,22 @@ export class Faroe {
 		await this.fetchNoBody("DELETE", `/users/${userId}/totp`, null, clientIP);
 	}
 
-	public async createPasswordResetRequest(email: string, clientIP: string | null): Promise<FaroePasswordResetRequest> {
+	public async createPasswordResetRequest(
+		email: string,
+		clientIP: string | null
+	): Promise<[request: FaroePasswordResetRequest, code: string]> {
 		const body = JSON.stringify({
 			email: email
 		});
 		const result = await this.fetchJSON("POST", `/password-reset`, body, clientIP);
+		if (typeof result !== "object" || result === null) {
+			throw new Error("Failed to parse result object");
+		}
+		if ("code" in result === false || typeof result.code !== "string") {
+			throw new Error("Failed to parse result object");
+		}
 		const resetRequest = parsePasswordResetRequestJSON(result);
-		return resetRequest;
+		return [resetRequest, result.code];
 	}
 
 	public async getPasswordResetRequest(
