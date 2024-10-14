@@ -80,9 +80,9 @@ export class Faroe {
 		return user;
 	}
 
-	public async getUser(userId: string, clientIP: string | null): Promise<FaroeUser | null> {
+	public async getUser(userId: string): Promise<FaroeUser | null> {
 		try {
-			const result = await this.fetchJSON("GET", `/users/${userId}`, null, clientIP);
+			const result = await this.fetchJSON("GET", `/users/${userId}`, null, null);
 			const user = parseUserJSON(result);
 			return user;
 		} catch (e) {
@@ -93,16 +93,14 @@ export class Faroe {
 		}
 	}
 
-	public async getUsers(
-		sortBy: UserSortBy,
-		sortOrder: SortOrder,
-		count: number,
-		page: number,
-		clientIP: string | null
-	): Promise<FaroeUser[]> {
+	public async getUsers(sortBy: UserSortBy, sortOrder: SortOrder, count: number, page: number): Promise<FaroeUser[]> {
 		const searchParams = new URLSearchParams();
 		if (sortBy === UserSortBy.CreatedAt) {
 			searchParams.set("sort_by", "created_at");
+		} else if (sortBy === UserSortBy.Id) {
+			searchParams.set("sort_by", "id");
+		} else if (sortBy === UserSortBy.Email) {
+			searchParams.set("sort_by", "email");
 		}
 		if (sortOrder === SortOrder.Ascending) {
 			searchParams.set("sort_by", "ascending");
@@ -111,7 +109,7 @@ export class Faroe {
 		}
 		searchParams.set("count", count.toString());
 		searchParams.set("page", page.toString());
-		const result = await this.fetchJSON("GET", `/users?${searchParams.toString()}`, null, clientIP);
+		const result = await this.fetchJSON("GET", `/users?${searchParams.toString()}`, null, null);
 		if (!Array.isArray(result)) {
 			throw new Error("Failed to parse result");
 		}
@@ -123,7 +121,13 @@ export class Faroe {
 	}
 
 	public async deleteUser(userId: string, clientIP: string | null): Promise<void> {
-		await this.fetchNoBody("DELETE", `/users/${userId}`, null, clientIP);
+		try {
+			await this.fetchNoBody("DELETE", `/users/${userId}`, null, clientIP);
+		} catch (e) {
+			if (e instanceof FaroeError === false || e.code !== "NOT_FOUND") {
+				throw e;
+			}
+		}
 	}
 
 	public async updateUserPassword(
@@ -177,7 +181,7 @@ export class Faroe {
 		return verificationRequest;
 	}
 
-	public async verifyUserEmailVerificationRequest(
+	public async verifyUserEmail(
 		userId: string,
 		requestId: string,
 		code: string,
@@ -192,42 +196,38 @@ export class Faroe {
 		return user;
 	}
 
-	public async deleteUserEmailVerificationRequest(
-		userId: string,
-		requestId: string,
-		clientIP: string | null
-	): Promise<void> {
-		await this.fetchNoBody("DELETE", `/users/${userId}/email-verification/${requestId}`, null, clientIP);
+	public async deleteUserEmailVerificationRequest(userId: string, requestId: string): Promise<void> {
+		try {
+			await this.fetchNoBody("DELETE", `/users/${userId}/email-verification/${requestId}`, null, null);
+		} catch (e) {
+			if (e instanceof FaroeError === false || e.code !== "NOT_FOUND") {
+				throw e;
+			}
+		}
 	}
 
 	public async getUserEmailVerificationRequest(
 		userId: string,
-		requestId: string,
-		clientIP: string | null
+		requestId: string
 	): Promise<FaroeEmailVerificationRequest> {
-		const result = await this.fetchJSON("GET", `/users/${userId}/email-verification/${requestId}`, null, clientIP);
+		const result = await this.fetchJSON("GET", `/users/${userId}/email-verification/${requestId}`, null, null);
 		const verificationRequest = parseEmailVerificationRequestJSON(result);
 		return verificationRequest;
 	}
 
-	public async registerUserTOTPCredential(
-		userId: string,
-		key: Uint8Array,
-		code: string,
-		clientIP: string | null
-	): Promise<string> {
+	public async registerUserTOTPCredential(userId: string, key: Uint8Array, code: string): Promise<string> {
 		const body = JSON.stringify({
 			key: encodeBase64(key),
 			code: code
 		});
-		const result = await this.fetchJSON("POST", `/users/${userId}/totp`, body, clientIP);
+		const result = await this.fetchJSON("POST", `/users/${userId}/totp`, body, null);
 		const newRecoveryCode = parseRecoveryCodeJSON(result);
 		return newRecoveryCode;
 	}
 
-	public async getUserTOTPCredential(userId: string, clientIP: string | null): Promise<FaroeTOTPCredential | null> {
+	public async getUserTOTPCredential(userId: string): Promise<FaroeTOTPCredential | null> {
 		try {
-			const result = await this.fetchJSON("GET", `/users/${userId}/totp`, null, clientIP);
+			const result = await this.fetchJSON("GET", `/users/${userId}/totp`, null, null);
 			const credential = parseTOTPCredentialJSON(result);
 			return credential;
 		} catch (e) {
@@ -246,7 +246,13 @@ export class Faroe {
 	}
 
 	public async deleteUserTOTPCredential(userId: string, clientIP: string | null): Promise<void> {
-		await this.fetchNoBody("DELETE", `/users/${userId}/totp`, null, clientIP);
+		try {
+			await this.fetchNoBody("DELETE", `/users/${userId}/totp`, null, clientIP);
+		} catch (e) {
+			if (e instanceof FaroeError === false || e.code !== "NOT_FOUND") {
+				throw e;
+			}
+		}
 	}
 
 	public async createPasswordResetRequest(
@@ -267,12 +273,9 @@ export class Faroe {
 		return [resetRequest, result.code];
 	}
 
-	public async getPasswordResetRequest(
-		requestId: string,
-		clientIP: string | null
-	): Promise<FaroePasswordResetRequest | null> {
+	public async getPasswordResetRequest(requestId: string): Promise<FaroePasswordResetRequest | null> {
 		try {
-			const result = await this.fetchJSON("GET", `/password-reset/${requestId}`, null, clientIP);
+			const result = await this.fetchJSON("GET", `/password-reset/${requestId}`, null, null);
 			const resetRequest = parsePasswordResetRequestJSON(result);
 			return resetRequest;
 		} catch (e) {
@@ -283,8 +286,14 @@ export class Faroe {
 		}
 	}
 
-	public async deletePasswordResetRequest(requestId: string, clientIP: string | null): Promise<void> {
-		await this.fetchNoBody("DELETE", `/password-reset/${requestId}`, null, clientIP);
+	public async deletePasswordResetRequest(requestId: string): Promise<void> {
+		try {
+			await this.fetchNoBody("DELETE", `/password-reset/${requestId}`, null, null);
+		} catch (e) {
+			if (e instanceof FaroeError === false || e.code !== "NOT_FOUND") {
+				throw e;
+			}
+		}
 	}
 
 	public async verifyPasswordResetRequestEmail(
@@ -322,7 +331,7 @@ export class Faroe {
 		return newRecoveryCode;
 	}
 
-	public async resetUserPassword(requestId: string, password: string, clientIP: string | null): Promise<FaroeUser> {
+	public async resetPassword(requestId: string, password: string, clientIP: string | null): Promise<FaroeUser> {
 		const body = JSON.stringify({
 			request_id: requestId,
 			password: password
@@ -334,7 +343,9 @@ export class Faroe {
 }
 
 export enum UserSortBy {
-	CreatedAt = 0
+	CreatedAt = 0,
+	Id,
+	Email
 }
 
 export enum SortOrder {
@@ -391,6 +402,14 @@ export interface FaroePasswordResetRequest {
 	email: string;
 	emailVerified: boolean;
 	twoFactorVerified: boolean;
+}
+
+export function verifyPasswordInput(password: string): boolean {
+	return password.length >= 8 && password.length < 128;
+}
+
+export function verifyEmailInput(email: string): boolean {
+	return email.length > 0 && email.length < 256 && email.trim() === email && /^.+@.+\..+$/.test(email);
 }
 
 function parseUserJSON(data: unknown): FaroeUser {
