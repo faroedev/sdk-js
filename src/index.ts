@@ -300,7 +300,7 @@ export class Faroe {
 		await this.fetchNoBody("POST", `/password-reset/${requestId}/verify-2fa/totp`, body, clientIP);
 	}
 
-	public async resetPasswordResetRequestUser2FAWithRecoveryCode(
+	public async resetPasswordResetRequestUser2FA(
 		requestId: string,
 		recoveryCode: string,
 		clientIP: string | null
