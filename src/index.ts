@@ -2,9 +2,9 @@ import { decodeBase64, encodeBase64 } from "@oslojs/encoding";
 
 export class Faroe {
 	private url: string;
-	private secret: string;
+	private secret: string | null;
 
-	constructor(url: string, secret: string) {
+	constructor(url: string, secret: string | null) {
 		this.url = url;
 		this.secret = secret;
 	}
@@ -16,7 +16,9 @@ export class Faroe {
 				method,
 				body
 			});
-			request.headers.set("Authorization", this.secret);
+			if (this.secret !== null) {
+				request.headers.set("Authorization", this.secret);
+			}
 			if (clientIP !== null) {
 				request.headers.set("X-Client-IP", clientIP);
 			}
@@ -48,7 +50,9 @@ export class Faroe {
 				method,
 				body
 			});
-			request.headers.set("Authorization", this.secret);
+			if (this.secret !== null) {
+				request.headers.set("Authorization", this.secret);
+			}
 			if (clientIP !== null) {
 				request.headers.set("X-Client-IP", clientIP);
 			}
@@ -186,14 +190,19 @@ export class Faroe {
 		requestId: string,
 		code: string,
 		clientIP: string | null
-	): Promise<FaroeUser> {
+	): Promise<string> {
 		const body = JSON.stringify({
 			request_id: requestId,
 			code: code
 		});
 		const result = await this.fetchJSON("POST", `/users/${userId}/verify-email`, body, clientIP);
-		const user = parseUserJSON(result);
-		return user;
+		if (typeof result !== "object" || result === null) {
+			throw new Error("Failed to parse email");
+		}
+		if ("email" in result === false || typeof result.email !== "string") {
+			throw new Error("Failed to parse email");
+		}
+		return result.email;
 	}
 
 	public async deleteUserEmailVerificationRequest(userId: string, requestId: string): Promise<void> {
@@ -307,38 +316,12 @@ export class Faroe {
 		await this.fetchNoBody("POST", `/password-reset/${requestId}/verify-email`, body, clientIP);
 	}
 
-	public async verifyPasswordResetRequest2FAWithTOTP(
-		requestId: string,
-		code: string,
-		clientIP: string | null
-	): Promise<void> {
-		const body = JSON.stringify({
-			code: code
-		});
-		await this.fetchNoBody("POST", `/password-reset/${requestId}/verify-2fa/totp`, body, clientIP);
-	}
-
-	public async resetPasswordResetRequestUser2FA(
-		requestId: string,
-		recoveryCode: string,
-		clientIP: string | null
-	): Promise<string> {
-		const body = JSON.stringify({
-			recovery_code: recoveryCode
-		});
-		const result = await this.fetchJSON("POST", `/password-reset/${requestId}/reset-2fa`, body, clientIP);
-		const newRecoveryCode = parseRecoveryCodeJSON(result);
-		return newRecoveryCode;
-	}
-
-	public async resetPassword(requestId: string, password: string, clientIP: string | null): Promise<FaroeUser> {
+	public async resetPassword(requestId: string, password: string, clientIP: string | null): Promise<void> {
 		const body = JSON.stringify({
 			request_id: requestId,
 			password: password
 		});
-		const result = await this.fetchJSON("POST", `/reset-password`, body, clientIP);
-		const user = parseUserJSON(result);
-		return user;
+		await this.fetchNoBody("POST", `/reset-password`, body, clientIP);
 	}
 }
 
@@ -401,7 +384,6 @@ export interface FaroePasswordResetRequest {
 	expiresAt: Date;
 	email: string;
 	emailVerified: boolean;
-	twoFactorVerified: boolean;
 }
 
 export function verifyPasswordInput(password: string): boolean {
@@ -499,17 +481,13 @@ function parsePasswordResetRequestJSON(data: unknown): FaroePasswordResetRequest
 	if ("email_verified" in data === false || typeof data.email_verified !== "boolean") {
 		throw new Error("Failed to parse password reset request object");
 	}
-	if ("two_factor_verified" in data === false || typeof data.two_factor_verified !== "boolean") {
-		throw new Error("Failed to parse password reset request object");
-	}
 	const request: FaroePasswordResetRequest = {
 		id: data.id,
 		userId: data.user_id,
 		createdAt: new Date(data.created_at * 1000),
 		expiresAt: new Date(data.expires_at * 1000),
 		email: data.email,
-		emailVerified: data.email_verified,
-		twoFactorVerified: data.two_factor_verified
+		emailVerified: data.email_verified
 	};
 	return request;
 }
