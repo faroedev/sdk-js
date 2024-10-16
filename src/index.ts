@@ -144,7 +144,7 @@ export class Faroe {
 			password: password,
 			new_password: newPassword
 		});
-		await this.fetchNoBody("POST", `/users/${userId}`, body, clientIP);
+		await this.fetchNoBody("POST", `/users/${userId}/update-password`, body, clientIP);
 	}
 
 	public async resetUser2FA(userId: string, recoveryCode: string, clientIP: string | null): Promise<string> {
