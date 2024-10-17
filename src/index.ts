@@ -174,40 +174,23 @@ export class Faroe {
 
 	public async createUserEmailVerificationRequest(
 		userId: string,
-		email: string,
 		clientIP: string | null
 	): Promise<FaroeEmailVerificationRequest> {
-		const body = JSON.stringify({
-			email: email
-		});
-		const result = await this.fetchJSON("POST", `/users/${userId}/email-verification-requests`, body, clientIP);
+		const result = await this.fetchJSON("POST", `/users/${userId}/email-verification-request`, null, clientIP);
 		const verificationRequest = parseEmailVerificationRequestJSON(result);
 		return verificationRequest;
 	}
 
-	public async verifyUserEmail(
-		userId: string,
-		requestId: string,
-		code: string,
-		clientIP: string | null
-	): Promise<string> {
+	public async verifyUserEmail(userId: string, code: string, clientIP: string | null): Promise<void> {
 		const body = JSON.stringify({
-			request_id: requestId,
 			code: code
 		});
-		const result = await this.fetchJSON("POST", `/users/${userId}/verify-email`, body, clientIP);
-		if (typeof result !== "object" || result === null) {
-			throw new Error("Failed to parse email");
-		}
-		if ("email" in result === false || typeof result.email !== "string") {
-			throw new Error("Failed to parse email");
-		}
-		return result.email;
+		await this.fetchNoBody("POST", `/users/${userId}/verify-email`, body, clientIP);
 	}
 
-	public async deleteEmailVerificationRequest(requestId: string): Promise<void> {
+	public async deleteUserEmailVerificationRequest(userId: string): Promise<void> {
 		try {
-			await this.fetchNoBody("DELETE", `/email-verification-requests/${requestId}`, null, null);
+			await this.fetchNoBody("DELETE", `/users/${userId}/email-verification-request`, null, null);
 		} catch (e) {
 			if (e instanceof FaroeError === false || e.code !== "NOT_FOUND") {
 				throw e;
@@ -215,9 +198,9 @@ export class Faroe {
 		}
 	}
 
-	public async getEmailVerificationRequest(requestId: string): Promise<FaroeEmailVerificationRequest | null> {
+	public async getUserEmailVerificationRequest(userId: string): Promise<FaroeEmailVerificationRequest | null> {
 		try {
-			const result = await this.fetchJSON("GET", `/email-verification-requests/${requestId}`, null, null);
+			const result = await this.fetchJSON("GET", `/users/${userId}/email-verification-request`, null, null);
 			const verificationRequest = parseEmailVerificationRequestJSON(result);
 			return verificationRequest;
 		} catch (e) {
@@ -265,6 +248,57 @@ export class Faroe {
 			if (e instanceof FaroeError === false || e.code !== "NOT_FOUND") {
 				throw e;
 			}
+		}
+	}
+
+	public async createUserEmailUpdateRequest(
+		userId: string,
+		email: string,
+		clientIP: string | null
+	): Promise<FaroeEmailUpdateRequest> {
+		const body = JSON.stringify({
+			email
+		});
+		const result = await this.fetchJSON("POST", `/users/${userId}/email-update-requests`, body, clientIP);
+		const verificationRequest = parseEmailUpdateRequestJSON(result);
+		return verificationRequest;
+	}
+
+	public async updateUserEmail(requestId: string, code: string, clientIP: string | null): Promise<string> {
+		const body = JSON.stringify({
+			request_id: requestId,
+			code: code
+		});
+		const result = await this.fetchJSON("POST", `/update-email`, body, clientIP);
+		if (typeof result !== "object" || result === null) {
+			throw new Error("Failed to parse email");
+		}
+		if ("email" in result === false || typeof result.email !== "string") {
+			throw new Error("Failed to parse email");
+		}
+		return result.email;
+	}
+
+	public async deleteEmailUpdateRequest(requestId: string): Promise<void> {
+		try {
+			await this.fetchNoBody("DELETE", `/email-update-requests/${requestId}`, null, null);
+		} catch (e) {
+			if (e instanceof FaroeError === false || e.code !== "NOT_FOUND") {
+				throw e;
+			}
+		}
+	}
+
+	public async getEmailUpdateRequest(requestId: string): Promise<FaroeEmailUpdateRequest | null> {
+		try {
+			const result = await this.fetchJSON("GET", `/email-update-requests/${requestId}`, null, null);
+			const verificationRequest = parseEmailUpdateRequestJSON(result);
+			return verificationRequest;
+		} catch (e) {
+			if (e instanceof FaroeError && e.code === "NOT_FOUND") {
+				return null;
+			}
+			throw e;
 		}
 	}
 
@@ -320,7 +354,7 @@ export class Faroe {
 		await this.fetchNoBody("POST", `/password-reset-requests/${requestId}/verify-email`, body, clientIP);
 	}
 
-	public async resetPassword(requestId: string, password: string, clientIP: string | null): Promise<void> {
+	public async resetUserPassword(requestId: string, password: string, clientIP: string | null): Promise<void> {
 		const body = JSON.stringify({
 			request_id: requestId,
 			password: password
@@ -369,6 +403,14 @@ export interface FaroeEmailVerificationRequest {
 	userId: string;
 	createdAt: Date;
 	expiresAt: Date;
+	code: string;
+}
+
+export interface FaroeEmailUpdateRequest {
+	id: string;
+	userId: string;
+	createdAt: Date;
+	expiresAt: Date;
 	email: string;
 	code: string;
 }
@@ -385,7 +427,6 @@ export interface FaroePasswordResetRequest {
 	userId: string;
 	createdAt: Date;
 	expiresAt: Date;
-	email: string;
 }
 
 export function verifyPasswordInput(password: string): boolean {
@@ -437,13 +478,42 @@ function parseEmailVerificationRequestJSON(data: unknown): FaroeEmailVerificatio
 	if ("expires_at" in data === false || typeof data.expires_at !== "number") {
 		throw new Error("Failed to parse email verification request object");
 	}
+	if ("code" in data === false || typeof data.code !== "string") {
+		throw new Error("Failed to parse email verification request object");
+	}
+	const request: FaroeEmailVerificationRequest = {
+		id: data.id,
+		userId: data.user_id,
+		createdAt: new Date(data.created_at * 1000),
+		expiresAt: new Date(data.expires_at * 1000),
+		code: data.code
+	};
+	return request;
+}
+
+function parseEmailUpdateRequestJSON(data: unknown): FaroeEmailUpdateRequest {
+	if (typeof data !== "object" || data === null) {
+		throw new Error("Failed to parse email verification request object");
+	}
+	if ("id" in data === false || typeof data.id !== "string") {
+		throw new Error("Failed to parse email verification request object");
+	}
+	if ("user_id" in data === false || typeof data.user_id !== "string") {
+		throw new Error("Failed to parse email verification request object");
+	}
+	if ("created_at" in data === false || typeof data.created_at !== "number") {
+		throw new Error("Failed to parse email verification request object");
+	}
+	if ("expires_at" in data === false || typeof data.expires_at !== "number") {
+		throw new Error("Failed to parse email verification request object");
+	}
 	if ("email" in data === false || typeof data.email !== "string") {
 		throw new Error("Failed to parse email verification request object");
 	}
 	if ("code" in data === false || typeof data.code !== "string") {
 		throw new Error("Failed to parse email verification request object");
 	}
-	const request: FaroeEmailVerificationRequest = {
+	const request: FaroeEmailUpdateRequest = {
 		id: data.id,
 		userId: data.user_id,
 		createdAt: new Date(data.created_at * 1000),
@@ -470,15 +540,11 @@ function parsePasswordResetRequestJSON(data: unknown): FaroePasswordResetRequest
 	if ("expires_at" in data === false || typeof data.expires_at !== "number") {
 		throw new Error("Failed to parse password reset request object");
 	}
-	if ("email" in data === false || typeof data.email !== "string") {
-		throw new Error("Failed to parse password reset request object");
-	}
 	const request: FaroePasswordResetRequest = {
 		id: data.id,
 		userId: data.user_id,
 		createdAt: new Date(data.created_at * 1000),
-		expiresAt: new Date(data.expires_at * 1000),
-		email: data.email
+		expiresAt: new Date(data.expires_at * 1000)
 	};
 	return request;
 }
