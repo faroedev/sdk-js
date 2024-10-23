@@ -175,9 +175,9 @@ export class Faroe {
 	public async createUserEmailVerificationRequest(
 		userId: string,
 		clientIP: string | null
-	): Promise<FaroeEmailVerificationRequest> {
+	): Promise<FaroeUserEmailVerificationRequest> {
 		const result = await this.fetchJSON("POST", `/users/${userId}/email-verification-request`, null, clientIP);
-		const verificationRequest = parseEmailVerificationRequestJSON(result);
+		const verificationRequest = parseUserEmailVerificationRequestJSON(result);
 		return verificationRequest;
 	}
 
@@ -198,10 +198,10 @@ export class Faroe {
 		}
 	}
 
-	public async getUserEmailVerificationRequest(userId: string): Promise<FaroeEmailVerificationRequest | null> {
+	public async getUserEmailVerificationRequest(userId: string): Promise<FaroeUserEmailVerificationRequest | null> {
 		try {
 			const result = await this.fetchJSON("GET", `/users/${userId}/email-verification-request`, null, null);
-			const verificationRequest = parseEmailVerificationRequestJSON(result);
+			const verificationRequest = parseUserEmailVerificationRequestJSON(result);
 			return verificationRequest;
 		} catch (e) {
 			if (e instanceof FaroeError && e.code === "NOT_FOUND") {
@@ -211,20 +211,24 @@ export class Faroe {
 		}
 	}
 
-	public async registerUserTOTPCredential(userId: string, key: Uint8Array, code: string): Promise<string> {
+	public async registerUserTOTPCredential(
+		userId: string,
+		key: Uint8Array,
+		code: string
+	): Promise<FaroeUserTOTPCredential> {
 		const body = JSON.stringify({
 			key: encodeBase64(key),
 			code: code
 		});
 		const result = await this.fetchJSON("POST", `/users/${userId}/totp`, body, null);
-		const newRecoveryCode = parseRecoveryCodeJSON(result);
-		return newRecoveryCode;
+		const credential = parseUserTOTPCredentialJSON(result);
+		return credential;
 	}
 
-	public async getUserTOTPCredential(userId: string): Promise<FaroeTOTPCredential | null> {
+	public async getUserTOTPCredential(userId: string): Promise<FaroeUserTOTPCredential | null> {
 		try {
 			const result = await this.fetchJSON("GET", `/users/${userId}/totp`, null, null);
-			const credential = parseTOTPCredentialJSON(result);
+			const credential = parseUserTOTPCredentialJSON(result);
 			return credential;
 		} catch (e) {
 			if (e instanceof FaroeError && e.code === "NOT_FOUND") {
@@ -461,8 +465,7 @@ export interface FaroeUser {
 	totpRegistered: boolean;
 }
 
-export interface FaroeEmailVerificationRequest {
-	id: string;
+export interface FaroeUserEmailVerificationRequest {
 	userId: string;
 	createdAt: Date;
 	expiresAt: Date;
@@ -478,8 +481,7 @@ export interface FaroeEmailUpdateRequest {
 	code: string;
 }
 
-export interface FaroeTOTPCredential {
-	id: string;
+export interface FaroeUserTOTPCredential {
 	userId: string;
 	createdAt: Date;
 	key: Uint8Array;
@@ -529,11 +531,8 @@ function parseUserJSON(data: unknown): FaroeUser {
 	return user;
 }
 
-function parseEmailVerificationRequestJSON(data: unknown): FaroeEmailVerificationRequest {
+function parseUserEmailVerificationRequestJSON(data: unknown): FaroeUserEmailVerificationRequest {
 	if (typeof data !== "object" || data === null) {
-		throw new Error("Failed to parse email verification request object");
-	}
-	if ("id" in data === false || typeof data.id !== "string") {
 		throw new Error("Failed to parse email verification request object");
 	}
 	if ("user_id" in data === false || typeof data.user_id !== "string") {
@@ -548,8 +547,7 @@ function parseEmailVerificationRequestJSON(data: unknown): FaroeEmailVerificatio
 	if ("code" in data === false || typeof data.code !== "string") {
 		throw new Error("Failed to parse email verification request object");
 	}
-	const request: FaroeEmailVerificationRequest = {
-		id: data.id,
+	const request: FaroeUserEmailVerificationRequest = {
 		userId: data.user_id,
 		createdAt: new Date(data.created_at * 1000),
 		expiresAt: new Date(data.expires_at * 1000),
@@ -626,11 +624,8 @@ function parseRecoveryCodeJSON(data: unknown): string {
 	return data.recovery_code;
 }
 
-function parseTOTPCredentialJSON(data: unknown): FaroeTOTPCredential {
+function parseUserTOTPCredentialJSON(data: unknown): FaroeUserTOTPCredential {
 	if (typeof data !== "object" || data === null) {
-		throw new Error("Failed to parse TOTP credential object");
-	}
-	if ("id" in data === false || typeof data.id !== "string") {
 		throw new Error("Failed to parse TOTP credential object");
 	}
 	if ("user_id" in data === false || typeof data.user_id !== "string") {
@@ -642,8 +637,7 @@ function parseTOTPCredentialJSON(data: unknown): FaroeTOTPCredential {
 	if ("key" in data === false || typeof data.key !== "string") {
 		throw new Error("Failed to parse TOTP credential object");
 	}
-	const credential: FaroeTOTPCredential = {
-		id: data.id,
+	const credential: FaroeUserTOTPCredential = {
 		userId: data.user_id,
 		createdAt: new Date(data.created_at * 1000),
 		key: decodeBase64(data.key)
