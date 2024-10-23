@@ -34,7 +34,7 @@ export class Faroe {
 			if ("error" in result === false || typeof result.error !== "string") {
 				throw new Error("Unexpected error response");
 			}
-			throw new FaroeError(result.error);
+			throw new FaroeError(response.status, result.error);
 		}
 	}
 
@@ -68,7 +68,7 @@ export class Faroe {
 			if ("error" in result === false || typeof result.error !== "string") {
 				throw new Error("Unexpected error response");
 			}
-			throw new FaroeError(result.error);
+			throw new FaroeError(response.status, result.error);
 		}
 		const result = await response.json();
 		return result;
@@ -118,7 +118,7 @@ export class Faroe {
 			throw new Error("Failed to parse result");
 		}
 		const users: FaroeUser[] = [];
-		for (let i = 0; i < users.length; i++) {
+		for (let i = 0; i < result.length; i++) {
 			users.push(parseUserJSON(result[i]));
 		}
 		return users;
@@ -264,6 +264,36 @@ export class Faroe {
 		return verificationRequest;
 	}
 
+	public async getUserEmailUpdateRequests(userId: string): Promise<FaroeEmailUpdateRequest[] | null> {
+		let result: unknown;
+		try {
+			result = await this.fetchJSON("GET", `/users/${userId}/email-update-requests`, null, null);
+		} catch (e) {
+			if (e instanceof FaroeError && e.code === "NOT_FOUND") {
+				return null;
+			}
+			throw e;
+		}
+		if (!Array.isArray(result)) {
+			throw new Error("Failed to parse result");
+		}
+		const updateRequests: FaroeEmailUpdateRequest[] = [];
+		for (let i = 0; i < result.length; i++) {
+			updateRequests.push(parseEmailUpdateRequestJSON(result[i]));
+		}
+		return updateRequests;
+	}
+
+	public async deleteUserEmailUpdateRequests(userId: string): Promise<void> {
+		try {
+			await this.fetchNoBody("GET", `/users/${userId}/email-update-requests`, null, null);
+		} catch (e) {
+			if (e instanceof FaroeError === false || e.code !== "NOT_FOUND") {
+				throw e;
+			}
+		}
+	}
+
 	public async updateUserEmail(requestId: string, code: string, clientIP: string | null): Promise<string> {
 		const body = JSON.stringify({
 			request_id: requestId,
@@ -361,6 +391,36 @@ export class Faroe {
 		});
 		await this.fetchNoBody("POST", `/reset-password`, body, clientIP);
 	}
+
+	public async getUserPasswordResetRequests(userId: string): Promise<FaroePasswordResetRequest[] | null> {
+		let result: unknown;
+		try {
+			result = await this.fetchJSON("GET", `/users/${userId}/password-reset-requests`, null, null);
+		} catch (e) {
+			if (e instanceof FaroeError && e.code === "NOT_FOUND") {
+				return null;
+			}
+			throw e;
+		}
+		if (!Array.isArray(result)) {
+			throw new Error("Failed to parse result");
+		}
+		const resetRequests: FaroePasswordResetRequest[] = [];
+		for (let i = 0; i < result.length; i++) {
+			resetRequests.push(parsePasswordResetRequestJSON(result[i]));
+		}
+		return resetRequests;
+	}
+
+	public async deleteUserPasswordResetRequests(userId: string): Promise<void> {
+		try {
+			await this.fetchNoBody("GET", `/users/${userId}/password-reset-requests`, null, null);
+		} catch (e) {
+			if (e instanceof FaroeError === false || e.code !== "NOT_FOUND") {
+				throw e;
+			}
+		}
+	}
 }
 
 export enum UserSortBy {
@@ -383,10 +443,12 @@ export class FaroeFetchError extends Error {
 }
 
 export class FaroeError extends Error {
+	public status: number;
 	public code: string;
 
-	constructor(code: string) {
+	constructor(status: number, code: string) {
 		super("Faroe error");
+		this.status = status;
 		this.code = code;
 	}
 }
@@ -395,6 +457,7 @@ export interface FaroeUser {
 	id: string;
 	createdAt: Date;
 	email: string;
+	recoveryCode: string;
 	totpRegistered: boolean;
 }
 
@@ -450,6 +513,9 @@ function parseUserJSON(data: unknown): FaroeUser {
 	if ("email" in data === false || typeof data.email !== "string") {
 		throw new Error("Failed to parse user object");
 	}
+	if ("recovery_code" in data === false || typeof data.recovery_code !== "string") {
+		throw new Error("Failed to parse user object");
+	}
 	if ("totp_registered" in data === false || typeof data.totp_registered !== "boolean") {
 		throw new Error("Failed to parse user object");
 	}
@@ -457,6 +523,7 @@ function parseUserJSON(data: unknown): FaroeUser {
 		id: data.id,
 		createdAt: new Date(data.created_at * 1000),
 		email: data.email,
+		recoveryCode: data.recovery_code,
 		totpRegistered: data.totp_registered
 	};
 	return user;
