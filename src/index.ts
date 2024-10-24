@@ -129,7 +129,7 @@ export class Faroe {
 		searchParams.set("page", page.toString());
 
 		if (options !== undefined && options.emailQuery !== undefined) {
-			searchParams.set("email_query", page.toString());
+			searchParams.set("email_query", options.emailQuery.toString());
 		}
 
 		let response: Response;
