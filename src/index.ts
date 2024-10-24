@@ -97,8 +97,15 @@ export class Faroe {
 		}
 	}
 
-	public async getUsers(sortBy: UserSortBy, sortOrder: SortOrder, count: number, page: number): Promise<FaroeUser[]> {
+	public async getUsers(options?: {
+		sortBy?: UserSortBy;
+		sortOrder?: SortOrder;
+		perPage?: number;
+		page?: number;
+	}): Promise<PaginationResult<FaroeUser>> {
 		const searchParams = new URLSearchParams();
+
+		const sortBy: UserSortBy = options?.sortBy ?? UserSortBy.CreatedAt;
 		if (sortBy === UserSortBy.CreatedAt) {
 			searchParams.set("sort_by", "created_at");
 		} else if (sortBy === UserSortBy.Id) {
@@ -106,22 +113,62 @@ export class Faroe {
 		} else if (sortBy === UserSortBy.Email) {
 			searchParams.set("sort_by", "email");
 		}
+
+		const sortOrder: SortOrder = options?.sortOrder ?? SortOrder.Ascending;
 		if (sortOrder === SortOrder.Ascending) {
-			searchParams.set("sort_by", "ascending");
+			searchParams.set("sort_order", "ascending");
 		} else if (sortOrder === SortOrder.Descending) {
-			searchParams.set("sort_by", "descending");
+			searchParams.set("sort_order", "descending");
 		}
-		searchParams.set("count", count.toString());
+
+		const perPage = options?.perPage ?? 20;
+		searchParams.set("per_page", perPage.toString());
+
+		const page = options?.page ?? 1;
 		searchParams.set("page", page.toString());
-		const result = await this.fetchJSON("GET", `/users?${searchParams.toString()}`, null, null);
+		let response: Response;
+		try {
+			const request = new Request(this.url + `/users?${searchParams.toString()}`);
+			if (this.secret !== null) {
+				request.headers.set("Authorization", this.secret);
+			}
+			response = await fetch(request);
+		} catch (e) {
+			throw new FaroeFetchError(e);
+		}
+		if (!response.ok) {
+			const result = await response.json();
+			if (typeof result !== "object" || result === null) {
+				throw new Error("Unexpected error response");
+			}
+			if ("error" in result === false || typeof result.error !== "string") {
+				throw new Error("Unexpected error response");
+			}
+			throw new FaroeError(response.status, result.error);
+		}
+		const totalPagesHeader = response.headers.get("X-Pagination-Total");
+		if (totalPagesHeader === null) {
+			throw new Error("Missing 'X-Pagination-Total' header");
+		}
+		if (totalPagesHeader.startsWith("0x")) {
+			throw new Error("Invalid 'X-Pagination-Total' header");
+		}
+		const totalPages = Number.parseInt(totalPagesHeader);
+		if (Number.isNaN(totalPages)) {
+			throw new Error("Invalid 'X-Pagination-Total' header");
+		}
+		const result = await response.json();
 		if (!Array.isArray(result)) {
 			throw new Error("Failed to parse result");
 		}
-		const users: FaroeUser[] = [];
+		const paginationResult: PaginationResult<FaroeUser> = {
+			totalPages,
+			items: []
+		};
 		for (let i = 0; i < result.length; i++) {
-			users.push(parseUserJSON(result[i]));
+			paginationResult.items.push(parseUserJSON(result[i]));
 		}
-		return users;
+		return paginationResult;
 	}
 
 	public async deleteUser(userId: string, clientIP: string | null): Promise<void> {
@@ -492,6 +539,11 @@ export interface FaroePasswordResetRequest {
 	userId: string;
 	createdAt: Date;
 	expiresAt: Date;
+}
+
+export interface PaginationResult<T> {
+	totalPages: number;
+	items: T[];
 }
 
 export function verifyPasswordInput(password: string): boolean {
