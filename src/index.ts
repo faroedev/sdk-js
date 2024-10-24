@@ -102,6 +102,7 @@ export class Faroe {
 		sortOrder?: SortOrder;
 		perPage?: number;
 		page?: number;
+		emailQuery?: string;
 	}): Promise<PaginationResult<FaroeUser>> {
 		const searchParams = new URLSearchParams();
 
@@ -126,6 +127,11 @@ export class Faroe {
 
 		const page = options?.page ?? 1;
 		searchParams.set("page", page.toString());
+
+		if (options !== undefined && options.emailQuery !== undefined) {
+			searchParams.set("email_query", page.toString());
+		}
+
 		let response: Response;
 		try {
 			const request = new Request(this.url + `/users?${searchParams.toString()}`);
