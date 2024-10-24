@@ -267,14 +267,14 @@ export class Faroe {
 			key: encodeBase64(key),
 			code: code
 		});
-		const result = await this.fetchJSON("POST", `/users/${userId}/totp`, body, null);
+		const result = await this.fetchJSON("POST", `/users/${userId}/register-totp`, body, null);
 		const credential = parseUserTOTPCredentialJSON(result);
 		return credential;
 	}
 
 	public async getUserTOTPCredential(userId: string): Promise<FaroeUserTOTPCredential | null> {
 		try {
-			const result = await this.fetchJSON("GET", `/users/${userId}/totp`, null, null);
+			const result = await this.fetchJSON("GET", `/users/${userId}/totp-credential`, null, null);
 			const credential = parseUserTOTPCredentialJSON(result);
 			return credential;
 		} catch (e) {
@@ -294,7 +294,7 @@ export class Faroe {
 
 	public async deleteUserTOTPCredential(userId: string, clientIP: string | null): Promise<void> {
 		try {
-			await this.fetchNoBody("DELETE", `/users/${userId}/totp`, null, clientIP);
+			await this.fetchNoBody("DELETE", `/users/${userId}/totp-credential`, null, clientIP);
 		} catch (e) {
 			if (e instanceof FaroeError === false || e.code !== "NOT_FOUND") {
 				throw e;
