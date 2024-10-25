@@ -152,22 +152,36 @@ export class Faroe {
 			}
 			throw new FaroeError(response.status, result.error);
 		}
-		const totalPagesHeader = response.headers.get("X-Pagination-Total");
+		const totalPagesHeader = response.headers.get("X-Pagination-Total-Pages");
 		if (totalPagesHeader === null) {
-			throw new Error("Missing 'X-Pagination-Total' header");
+			throw new Error("Missing 'X-Pagination-Total-Pages' header");
 		}
 		if (totalPagesHeader.startsWith("0x")) {
-			throw new Error("Invalid 'X-Pagination-Total' header");
+			throw new Error("Invalid 'X-Pagination-Total-Pages' header");
 		}
 		const totalPages = Number.parseInt(totalPagesHeader);
 		if (Number.isNaN(totalPages)) {
+			throw new Error("Invalid 'X-Pagination-Total-Pages' header");
+		}
+
+		const totalUsersHeader = response.headers.get("X-Pagination-Total");
+		if (totalUsersHeader === null) {
+			throw new Error("Missing 'X-Pagination-Total' header");
+		}
+		if (totalUsersHeader.startsWith("0x")) {
 			throw new Error("Invalid 'X-Pagination-Total' header");
 		}
-		const result = await response.json();
+		const totalUsers = Number.parseInt(totalUsersHeader);
+		if (Number.isNaN(totalUsers)) {
+			throw new Error("Invalid 'X-Pagination-Total' header");
+		}
+
+		const result: unknown = await response.json();
 		if (!Array.isArray(result)) {
 			throw new Error("Failed to parse result");
 		}
 		const paginationResult: PaginationResult<FaroeUser> = {
+			total: totalUsers,
 			totalPages,
 			items: []
 		};
@@ -548,6 +562,7 @@ export interface FaroePasswordResetRequest {
 }
 
 export interface PaginationResult<T> {
+	total: number;
 	totalPages: number;
 	items: T[];
 }
