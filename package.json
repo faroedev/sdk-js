@@ -1,7 +1,7 @@
 {
 	"name": "@faroe/sdk",
 	"type": "module",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "JavaScript SDK for Faroe",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
