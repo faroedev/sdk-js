@@ -21,7 +21,7 @@ export class Faroe {
 			}
 			response = await fetch(request);
 		} catch (e) {
-			throw new FaroeFetchError(e);
+			throw new FetchError(e);
 		}
 		if (!response.ok) {
 			const result = await response.json();
@@ -47,7 +47,7 @@ export class Faroe {
 			}
 			response = await fetch(request);
 		} catch (e) {
-			throw new FaroeFetchError(e);
+			throw new FetchError(e);
 		}
 		if (!response.ok) {
 			const result = await response.json();
@@ -130,7 +130,7 @@ export class Faroe {
 			}
 			response = await fetch(request);
 		} catch (e) {
-			throw new FaroeFetchError(e);
+			throw new FetchError(e);
 		}
 		if (!response.ok) {
 			const result = await response.json();
@@ -493,7 +493,7 @@ export enum SortOrder {
 	Descending
 }
 
-export class FaroeFetchError extends Error {
+export class FetchError extends Error {
 	constructor(cause: unknown) {
 		super("Failed to fetch request", {
 			cause
