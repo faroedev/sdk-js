@@ -22,7 +22,7 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/faroedev/js"
+		"url": "https://github.com/faroedev/sdk-js"
 	},
 	"author": "pilcrowOnPaper",
 	"license": "MIT",
