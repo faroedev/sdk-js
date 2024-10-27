@@ -63,9 +63,8 @@ export class Faroe {
 		return result;
 	}
 
-	public async createUser(email: string, password: string, clientIP: string | null): Promise<FaroeUser> {
+	public async createUser(password: string, clientIP: string | null): Promise<FaroeUser> {
 		const body = JSON.stringify({
-			email: email,
 			password: password,
 			client_ip: clientIP
 		});
@@ -92,7 +91,6 @@ export class Faroe {
 		sortOrder?: SortOrder;
 		perPage?: number;
 		page?: number;
-		emailQuery?: string;
 	}): Promise<PaginationResult<FaroeUser>> {
 		const searchParams = new URLSearchParams();
 
@@ -101,8 +99,6 @@ export class Faroe {
 			searchParams.set("sort_by", "created_at");
 		} else if (sortBy === UserSortBy.Id) {
 			searchParams.set("sort_by", "id");
-		} else if (sortBy === UserSortBy.Email) {
-			searchParams.set("sort_by", "email");
 		}
 
 		const sortOrder: SortOrder = options?.sortOrder ?? SortOrder.Ascending;
@@ -117,10 +113,6 @@ export class Faroe {
 
 		const page = options?.page ?? 1;
 		searchParams.set("page", page.toString());
-
-		if (options !== undefined && options.emailQuery !== undefined) {
-			searchParams.set("email_query", options.emailQuery.toString());
-		}
 
 		let response: Response;
 		try {
@@ -220,15 +212,12 @@ export class Faroe {
 		return newRecoveryCode;
 	}
 
-	public async authenticateWithPassword(email: string, password: string, clientIP: string | null): Promise<FaroeUser> {
+	public async verifyUserPassword(userId: string, password: string, clientIP: string | null): Promise<void> {
 		const body = JSON.stringify({
-			email: email,
 			password: password,
 			client_ip: clientIP
 		});
-		const result = await this.fetchJSON("POST", "/authenticate/password", body);
-		const user = parseUserJSON(result);
-		return user;
+		await this.fetchNoBody("POST", `/users/${userId}/verify-password`, body);
 	}
 
 	public async createUserEmailVerificationRequest(userId: string): Promise<FaroeUserEmailVerificationRequest> {
@@ -350,12 +339,12 @@ export class Faroe {
 		}
 	}
 
-	public async updateUserEmail(requestId: string, code: string): Promise<string> {
+	public async verifyNewUserEmail(requestId: string, code: string): Promise<string> {
 		const body = JSON.stringify({
 			request_id: requestId,
 			code: code
 		});
-		const result = await this.fetchJSON("POST", `/update-email`, body);
+		const result = await this.fetchJSON("POST", "/verify-new-email", body);
 		if (typeof result !== "object" || result === null) {
 			throw new Error("Failed to parse email");
 		}
@@ -388,15 +377,14 @@ export class Faroe {
 		}
 	}
 
-	public async createPasswordResetRequest(
-		email: string,
+	public async createUserPasswordResetRequest(
+		userId: string,
 		clientIP: string | null
 	): Promise<[request: FaroePasswordResetRequest, code: string]> {
 		const body = JSON.stringify({
-			email: email,
 			client_ip: clientIP
 		});
-		const result = await this.fetchJSON("POST", `/password-reset-requests`, body);
+		const result = await this.fetchJSON("POST", `/users/${userId}/password-reset-requests`, body);
 		if (typeof result !== "object" || result === null) {
 			throw new Error("Failed to parse result object");
 		}
@@ -484,8 +472,7 @@ export class Faroe {
 
 export enum UserSortBy {
 	CreatedAt = 0,
-	Id,
-	Email
+	Id
 }
 
 export enum SortOrder {
@@ -515,7 +502,6 @@ export class FaroeError extends Error {
 export interface FaroeUser {
 	id: string;
 	createdAt: Date;
-	email: string;
 	recoveryCode: string;
 	totpRegistered: boolean;
 }
@@ -573,9 +559,6 @@ function parseUserJSON(data: unknown): FaroeUser {
 	if ("created_at" in data === false || typeof data.created_at !== "number") {
 		throw new Error("Failed to parse user object");
 	}
-	if ("email" in data === false || typeof data.email !== "string") {
-		throw new Error("Failed to parse user object");
-	}
 	if ("recovery_code" in data === false || typeof data.recovery_code !== "string") {
 		throw new Error("Failed to parse user object");
 	}
@@ -585,7 +568,6 @@ function parseUserJSON(data: unknown): FaroeUser {
 	const user: FaroeUser = {
 		id: data.id,
 		createdAt: new Date(data.created_at * 1000),
-		email: data.email,
 		recoveryCode: data.recovery_code,
 		totpRegistered: data.totp_registered
 	};
